@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "PackRep",
+    "slug": "packrep-full-expo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "PackRep uses your location to center the map and show nearby builders and essentials."
+        }
+      ]
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "newArchEnabled": true
+  }
+}
