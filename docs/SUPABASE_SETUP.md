@@ -34,3 +34,23 @@ Useful links
 - Supabase docs: https://supabase.com/docs
 - Auth guides: https://supabase.com/docs/guides/auth
 - SQL editor: Supabase Dashboard → SQL Editor
+
+Required package (developer note)
+
+- The client library used by `src/lib/supabase.ts` and the auth scaffolding is `@supabase/supabase-js`.
+- Install before running auth or migration scripts (do not install automatically during Phase 1 without approval).
+
+Install examples:
+
+```bash
+# npm
+npm install @supabase/supabase-js
+
+# yarn
+yarn add @supabase/supabase-js
+```
+
+Notes:
+
+- If you run the TypeScript migration scripts or use the auth helpers locally, ensure `@supabase/supabase-js` is present in `package.json`.
+- The project intentionally avoids installing packages in Phase 1; follow your team's policy for introducing dependencies and run tests after adding the package.
