@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { StatusBar, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AuthProvider, useAuth } from './src/lib/AuthContext';
 import PocketScreen from './src/screens/PocketScreen';
 import IntakeScreen from './src/screens/IntakeScreen';
 import LeadsScreen from './src/screens/LeadsScreen';
@@ -43,10 +44,20 @@ type MenuItem = {
 };
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+function AppContent() {
   const [screen, setScreen] = useState<ScreenKey>('home');
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [selectedBuilder, setSelectedBuilder] = useState<Builder | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const { user, loading } = useAuth();
 
   const title = useMemo(() => {
     switch (screen) {
@@ -85,6 +96,27 @@ export default function App() {
     { key: 'settings', label: 'Settings', onPress: () => go('settings') },
     { key: 'legal', label: 'Legal', onPress: () => go('legal') },
   ];
+
+  // Protected screens set
+  const protectedScreens = new Set<ScreenKey>([
+    'intake','leads','leadDetail','favorites','deck','builders','usedHomes','followups','appointment','wall','openHouseRequest'
+  ]);
+
+  function isProtected(s: ScreenKey) {
+    return protectedScreens.has(s);
+  }
+
+  // If auth loading, show a simple loading message
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <StatusBar barStyle='light-content' />
+        <View style={[styles.body, { padding: 20 }]}>
+          <Text style={{ color: colors.text }}>Loading authentication...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -130,20 +162,20 @@ export default function App() {
             onScheduleBuilder={(builder) => { setSelectedBuilder(builder); setScreen('appointment'); }}
           />
         )}
-        {screen === 'intake' && <IntakeScreen onCancel={() => setScreen('home')} onSaved={(leadId) => { setSelectedLeadId(leadId); setScreen('leadDetail'); }} />}
-        {screen === 'leads' && <LeadsScreen onBack={() => setScreen('home')} onOpenLead={(leadId) => { setSelectedLeadId(leadId); setScreen('leadDetail'); }} onNewLead={() => setScreen('intake')} />}
-        {screen === 'leadDetail' && <LeadDetailScreen leadId={selectedLeadId} onBack={() => setScreen('leads')} />}
-        {screen === 'favorites' && <FavoritesScreen onBack={() => setScreen('home')} />}
+        {screen === 'intake' && (isProtected('intake') && !user ? <SettingsScreen onBack={() => setScreen('home')} /> : <IntakeScreen onCancel={() => setScreen('home')} onSaved={(leadId) => { setSelectedLeadId(leadId); setScreen('leadDetail'); }} />)}
+        {screen === 'leads' && (isProtected('leads') && !user ? <SettingsScreen onBack={() => setScreen('home')} /> : <LeadsScreen onBack={() => setScreen('home')} onOpenLead={(leadId) => { setSelectedLeadId(leadId); setScreen('leadDetail'); }} onNewLead={() => setScreen('intake')} />)}
+        {screen === 'leadDetail' && (isProtected('leadDetail') && !user ? <SettingsScreen onBack={() => setScreen('home')} /> : <LeadDetailScreen leadId={selectedLeadId} onBack={() => setScreen('leads')} />)}
+        {screen === 'favorites' && (isProtected('favorites') && !user ? <SettingsScreen onBack={() => setScreen('home')} /> : <FavoritesScreen onBack={() => setScreen('home')} />)}
         {screen === 'settings' && <SettingsScreen onBack={() => setScreen('home')} />}
-        {screen === 'deck' && <BuilderDeckScreen onBack={() => setScreen('home')} />}
-        {screen === 'builders' && <BuildersScreen onBack={() => setScreen('home')} onRequestOpenHouse={(builder) => { setSelectedBuilder(builder); setScreen('openHouseRequest'); }} />}
-        {screen === 'usedHomes' && <UsedHomesScreen onBack={() => setScreen('home')} />}
-        {screen === 'followups' && <FollowUpsScreen onBack={() => setScreen('home')} onOpenLead={(leadId) => { setSelectedLeadId(leadId); setScreen('leadDetail'); }} />}
+        {screen === 'deck' && (isProtected('deck') && !user ? <SettingsScreen onBack={() => setScreen('home')} /> : <BuilderDeckScreen onBack={() => setScreen('home')} />)}
+        {screen === 'builders' && (isProtected('builders') && !user ? <SettingsScreen onBack={() => setScreen('home')} /> : <BuildersScreen onBack={() => setScreen('home')} onRequestOpenHouse={(builder) => { setSelectedBuilder(builder); setScreen('openHouseRequest'); }} />)}
+        {screen === 'usedHomes' && (isProtected('usedHomes') && !user ? <SettingsScreen onBack={() => setScreen('home')} /> : <UsedHomesScreen onBack={() => setScreen('home')} />)}
+        {screen === 'followups' && (isProtected('followups') && !user ? <SettingsScreen onBack={() => setScreen('home')} /> : <FollowUpsScreen onBack={() => setScreen('home')} onOpenLead={(leadId) => { setSelectedLeadId(leadId); setScreen('leadDetail'); }} />)}
         {screen === 'mortgage' && <MortgageCalcScreen onBack={() => setScreen('home')} />}
         {screen === 'legal' && <LegalDisclaimerScreen onBack={() => setScreen('home')} />}
-        {screen === 'appointment' && <AppointmentScreen builder={selectedBuilder} onBack={() => setScreen('home')} onCreateLead={() => setScreen('intake')} />}
-        {screen === 'wall' && <CommunityWallScreen onBack={() => setScreen('home')} />}
-        {screen === 'openHouseRequest' && <OpenHouseRequestScreen builder={selectedBuilder} onBack={() => setScreen('builders')} />}
+        {screen === 'appointment' && (isProtected('appointment') && !user ? <SettingsScreen onBack={() => setScreen('home')} /> : <AppointmentScreen builder={selectedBuilder} onBack={() => setScreen('home')} onCreateLead={() => setScreen('intake')} />)}
+        {screen === 'wall' && (isProtected('wall') && !user ? <SettingsScreen onBack={() => setScreen('home')} /> : <CommunityWallScreen onBack={() => setScreen('home')} />)}
+        {screen === 'openHouseRequest' && (isProtected('openHouseRequest') && !user ? <SettingsScreen onBack={() => setScreen('builders')} /> : <OpenHouseRequestScreen builder={selectedBuilder} onBack={() => setScreen('builders')} />)}
       </View>
     </SafeAreaView>
   );
