@@ -99,7 +99,7 @@ function AppContent() {
 
   // Protected screens set
   const protectedScreens = new Set<ScreenKey>([
-    'intake','leads','leadDetail','favorites','deck','builders','usedHomes','followups','appointment','wall','openHouseRequest'
+    'leads','leadDetail','favorites','deck','builders','usedHomes','followups','appointment','wall','openHouseRequest'
   ]);
 
   function isProtected(s: ScreenKey) {
