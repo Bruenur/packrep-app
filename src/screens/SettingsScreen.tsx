@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useAuth } from "../lib/AuthContext";
 import { MembershipTier, VerificationStatus, loadProfile, saveProfile } from "../lib/storage";
 import { colors, s } from "../ui/styles";
 
@@ -16,6 +17,20 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
   const [defaultBuilderRadiusMiles, setDefaultBuilderRadiusMiles] = useState("25");
   const [membershipTier, setMembershipTier] = useState<MembershipTier>("free");
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>("unverified");
+  // Auth UI state
+  const [authMode, setAuthMode] = useState<'signIn' | 'signUp'>('signIn');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLocalLoading, setAuthLocalLoading] = useState(false);
+
+  // useAuth may throw if AuthProvider isn't wired yet; handle gracefully
+  let auth: any = null;
+  try {
+    auth = useAuth();
+  } catch (e) {
+    auth = null;
+  }
 
   useEffect(() => {
     (async () => {
@@ -101,6 +116,89 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
 
         <View style={{ marginHorizontal: 14, marginTop: 14, gap: 10 }}>
           <Pressable style={s.btn} onPress={save}><Text style={s.btnText}>Save Settings</Text></Pressable>
+
+          <View style={s.card}>
+            <Text style={s.h2}>Authentication</Text>
+
+            {auth && auth.user ? (
+              <>
+                <Text style={s.label}>Signed in as</Text>
+                <Text style={[s.input, { paddingVertical: 12 }]}>{auth.user?.email ?? String(auth.user)}</Text>
+                <Pressable
+                  style={[s.btn, { marginTop: 10 }]}
+                  onPress={async () => {
+                    setAuthLocalLoading(true);
+                    setAuthError(null);
+                    try {
+                      await auth.signOut();
+                    } catch (err: any) {
+                      setAuthError(String(err?.message ?? err));
+                    } finally {
+                      setAuthLocalLoading(false);
+                    }
+                  }}
+                >
+                  <Text style={s.btnText}>Sign Out</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                {!auth && <Text style={s.small}>AuthProvider not configured — sign-in unavailable.</Text>}
+
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <Pressable style={[s.chip, authMode === 'signIn' && { backgroundColor: colors.accent, borderColor: colors.accent }]} onPress={() => setAuthMode('signIn')}>
+                    <Text style={[s.chipTxt, authMode === 'signIn' && { color: colors.bg }]}>Sign In</Text>
+                  </Pressable>
+                  <Pressable style={[s.chip, authMode === 'signUp' && { backgroundColor: colors.accent, borderColor: colors.accent }]} onPress={() => setAuthMode('signUp')}>
+                    <Text style={[s.chipTxt, authMode === 'signUp' && { color: colors.bg }]}>Sign Up</Text>
+                  </Pressable>
+                </View>
+
+                <Text style={s.label}>Email</Text>
+                <TextInput style={s.input} value={email} onChangeText={setEmail} placeholder="you@domain.com" autoCapitalize="none" keyboardType="email-address" />
+
+                <Text style={s.label}>Password</Text>
+                <TextInput style={s.input} value={authPassword} onChangeText={setAuthPassword} placeholder="Password" secureTextEntry />
+
+                {authMode === 'signUp' && (
+                  <>
+                    <Text style={s.label}>Confirm Password</Text>
+                    <TextInput style={s.input} value={authConfirmPassword} onChangeText={setAuthConfirmPassword} placeholder="Confirm Password" secureTextEntry />
+                  </>
+                )}
+
+                {authError ? <Text style={{ color: 'tomato', marginTop: 8 }}>{authError}</Text> : null}
+
+                <Pressable
+                  style={[s.btn, { marginTop: 12 }]}
+                  onPress={async () => {
+                    setAuthError(null);
+                    if (!auth) { setAuthError('AuthProvider not configured'); return; }
+                    if (!email) { setAuthError('Email is required'); return; }
+                    if (!authPassword) { setAuthError('Password is required'); return; }
+                    if (authMode === 'signUp' && authPassword !== authConfirmPassword) { setAuthError('Passwords do not match'); return; }
+                    setAuthLocalLoading(true);
+                    try {
+                      if (authMode === 'signIn') {
+                        const res = await auth.signIn(email, authPassword);
+                        if (res?.error) setAuthError(String(res.error.message || res.error));
+                      } else {
+                        const res = await auth.signUp(email, authPassword);
+                        if (res?.error) setAuthError(String(res.error.message || res.error));
+                      }
+                    } catch (err: any) {
+                      setAuthError(String(err?.message ?? err));
+                    } finally {
+                      setAuthLocalLoading(false);
+                    }
+                  }}
+                >
+                  <Text style={s.btnText}>{authLocalLoading || (auth && auth.loading) ? 'Please wait...' : authMode === 'signIn' ? 'Sign In' : 'Create Account'}</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+
           <Pressable style={s.btnGhost} onPress={onBack}><Text style={s.btnGhostText}>Back</Text></Pressable>
         </View>
       </ScrollView>
