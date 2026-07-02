@@ -56,7 +56,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const res = await Auth.signUp(email, password);
-      // caller can inspect res for errors
+      if (!res?.error) {
+        const refreshed = await Auth.getSession();
+        if ((refreshed as any)?.session) {
+          setSession((refreshed as any).session);
+          setUser((refreshed as any).session?.user ?? null);
+        }
+      }
       return res;
     } finally {
       setLoading(false);
@@ -67,6 +73,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const res = await Auth.signIn(email, password);
+      if (!res?.error) {
+        const refreshed = await Auth.getSession();
+        if ((refreshed as any)?.session) {
+          setSession((refreshed as any).session);
+          setUser((refreshed as any).session?.user ?? null);
+        }
+      }
       return res;
     } finally {
       setLoading(false);

@@ -24,6 +24,11 @@ export type PackFlags = {
 
 export type MembershipTier = "free" | "verified" | "pro";
 export type VerificationStatus = "unverified" | "pending" | "verified";
+export type ProfileRole = "realtor" | "builder";
+
+export function normalizeProfileRole(role?: string | null): ProfileRole {
+  return role === "builder" ? "builder" : "realtor";
+}
 
 export type LeadActivity = {
   id: string;
@@ -200,6 +205,7 @@ export type Appointment = {
 export type Profile = {
   name?: string;
   brokerage?: string;
+  licenseNumber?: string;
   email?: string;
   phone?: string;
   defaultArea?: string;
@@ -207,7 +213,21 @@ export type Profile = {
   defaultBuilderRadiusMiles?: number;
   membershipTier?: MembershipTier;
   verificationStatus?: VerificationStatus;
+  role?: ProfileRole;
 };
+
+function normalizeProfile(profile: Profile | null | undefined): Profile | null {
+  if (!profile) return null;
+  return {
+    ...profile,
+    role: normalizeProfileRole(profile.role),
+  };
+}
+
+export function isProfileComplete(profile: Profile | null | undefined): boolean {
+  const values = [profile?.name, profile?.brokerage, profile?.licenseNumber, profile?.phone, profile?.email];
+  return values.every((value) => !!String(value || "").trim());
+}
 
 const defaultUsedHomes: UsedHome[] = [
   {
@@ -465,11 +485,12 @@ export async function deleteFavoritePin(id: string) {
 
 export async function loadProfile(): Promise<Profile | null> {
   const raw = await AsyncStorage.getItem(KEY_PROFILE);
-  return safeParse<Profile | null>(raw, null);
+  return normalizeProfile(safeParse<Profile | null>(raw, null));
 }
 
 export async function saveProfile(profile: Profile) {
-  await AsyncStorage.setItem(KEY_PROFILE, JSON.stringify(profile));
+  const normalized = normalizeProfile(profile);
+  await AsyncStorage.setItem(KEY_PROFILE, JSON.stringify(normalized));
 }
 
 export async function loadAppointments(): Promise<Appointment[]> {
